@@ -1,0 +1,12 @@
+{
+  "name": "jquery.pub-sub-validate",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/wixo/jquery.pub-sub-validate.git"
+  },
+  "dependencies": {
+    "jquery": "~1.8.0",
+    "bootstrap": "~2.0.0"
+  }
+}
