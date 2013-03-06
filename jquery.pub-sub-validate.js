@@ -14,30 +14,7 @@
 
 /*jshint laxcomma:true, smarttabs:true, forin:true, noarg:true, noempty:true, eqeqeq:true, laxbreak:true, bitwise:true, strict:true, undef:true, unused:true, curly:true, browser:true, indent:4, maxerr:50 */
 
-/* jQuery Tiny Pub/Sub - v0.7 - 10/27/2011
- * http://benalman.com/
- * Copyright (c) 2011 "Cowboy" Ben Alman; Licensed MIT, GPL */
-
-(function ($) {
-	"use strict";
-
-	var o = $({});
-
-	$.subscribe = function() {
-		o.on.apply(o, arguments);
-	};
-
-	$.unsubscribe = function() {
-		o.off.apply(o, arguments);
-	};
-
-	$.publish = function() {
-		o.trigger.apply(o, arguments);
-	};
-
-}( window.jQuery ));
-
-//Validate
+// Pubsub Validate
 
 (function ($, window, document, undefined) {
 	"use strict";
@@ -61,11 +38,11 @@
 			var self   = this;
 
 			this.$form = $(options.form);
-			
+
 			//TODO: implement no mark up based version
 			this.controls = this.$form.find('[data-validate]');
 			this.config   = options.config;
-			
+
 			$.subscribe( 'valid-form', updateFormStatus );
 
 			$.each( self.controls, function ( index, control ) {
@@ -133,7 +110,7 @@
 
 			controlsStatuses[options.index] = options.status;
 
-			updateControlMessage( { 
+			updateControlMessage( {
 				messageContainer: messageContainer
 			  , text : message || ''
 			} );
