@@ -2,20 +2,14 @@
 //
 //    jQuery.psublidate 0.0.1
 //    Validate your forms in a pub sub way!
-//
-//    Dependencies:
-//    - E5Shim for oldIE
-//    - jQuery
-//    - Bootstrap forms markup
-//    - jQuery-tiny-pubsub
+//    assuming jQuery and TwBootstrap, libraries free version sometime around 2016
 //
 //
-//  Lots of constraints: i.e. validation rules live in the markup as a data tag. be careful.
-//
+
+//  lots of constraints: i.e. validation rules live in the markup as a data tag. be careful.
+
 //  TODO: Find a really cool name.
 //  TODO: Add multiple checkboxes, radio buttons and multiple radio buttons validations
-//
-//
 
 /*jshint laxcomma:true, smarttabs:true, forin:true, noarg:true, noempty:true, eqeqeq:true, laxbreak:true, bitwise:true, strict:true, undef:true, unused:true, curly:true, browser:true, indent:4, maxerr:50 */
 
@@ -40,6 +34,8 @@
 		  , validateFilter
 		  , validateSelect
 		  , validateCheckbox
+		  , validateMultipleCheckboxes
+		  , validateMultipleRadioButtons
 		  ;
 
 		init = function ( options ) {
@@ -64,10 +60,11 @@
 				rule           = control.data('pslidate');
 				validation     = self.config.rules[rule];
 				publishOptions =
-					{ status  : validateControl.apply( control, [{rule: rule, config: self.config}] )
+					{ status  : validateControl.apply( control, [{rule: rule, config: self.config, minimun: control.attr('data-pslCount') || 1 }] )
 					, index   : index
 					, control : control
 					, config  : self.config
+					, context : validation.indexOf('multiple') !== -1 ? 'multiple' : 'single'
 					};
 
 				$.subscribe( 'control-' + index, updateControlStatuses );
@@ -76,28 +73,43 @@
 
 				if ( validation === 'filter' ) {
 
-					control.on('keyup paste blur', function () {
+					control.on( 'keyup paste blur' , function () {
 
 						$.publish( 'control-' + index,
 							{ status  : validateControl.apply( control, [{rule: rule, config: self.config}] )
 							, index   : index
 							, control : control
 							, config  : self.config
+							, context : 'single'
 							}
 						);
 					} );
 
 				} else if ( validation === 'select' || validation === 'checkbox' ) {
 
-					control.on('change', function () {
+					control.on( 'change' , function () {
 						$.publish( 'control-' + index,
 							{ status  : validateControl.apply( control, [{rule: rule, config: self.config}] )
 							, index   : index
 							, control : control
 							, config  : self.config
+							, context : 'single'
 							}
 						);
 					} );
+
+				} else if ( validation === 'multipleCheckbox' || validation === 'multipleRadioButton' ) {
+
+					control.on( 'change' , function () {
+						$.publish( 'control-' + index,
+						{ status  : validateControl.apply( control, [{rule: rule, config: self.config, minimun: control.attr('data-pslCount') || 1 }] )
+						, index   : index
+						, control : control
+						, config  : self.config
+						, context : 'multiple'
+						}
+						);
+					});
 
 				} else {
 
@@ -117,7 +129,7 @@
 		updateControlStatuses = function (e, options) {
 			var control          = options.control
 			  , message          = ( options.status !== true ) && options.config.messages[options.status]
-			  , messageContainer = control.parent().find('p.help-inline')
+			  , messageContainer = options.context === 'single' ? control.parent().find('p.help-inline') : control.find('p.help-inline')
 			  , isValid
 			  ;
 
@@ -126,14 +138,16 @@
 			updateControlMessage(
 				{ messageContainer : messageContainer
 					// Use control custom error message or control default error message or none
-				, text             : control.data('pslerror') || message || ''
+				, text             : message || ''
+				, control          : control
 				}
 			);
 
-			updateControlClass( {
-				control: control
-			  , type   : message && 'error'
-			  , config : options.config
+			updateControlClass(
+			{ control : control
+			, type    : message && 'error'
+			, config  : options.config
+			, context : options.context
 			} );
 
 			isValid = controlsStatuses.every( function( element ) {
@@ -145,8 +159,9 @@
 		};
 
 		updateControlClass = function ( options ) {
-			var $controlHolder = options.control.parent().parent()
-			  , errorClass     = options.config.errorClass;
+			var $controlHolder = options.context === 'single' ? options.control.parent().parent() : options.control
+			  , errorClass     = options.config.errorClass
+			  ;
 
 			if ( options.type === 'error' ) {
 				$controlHolder.addClass( errorClass );
@@ -157,7 +172,8 @@
 		};
 
 		updateControlMessage = function ( options ) {
-			options.messageContainer.text( options.text );
+			var text = options.text !== '' ? options.control.data('pslerror') || options.text : '';
+			options.messageContainer.text( text );
 		};
 
 		validateControl = function ( options ) {
@@ -184,6 +200,16 @@
 
 				return validateCheckbox( validationOptions );
 
+			} else if ( validation === 'multipleCheckbox' ) {
+
+				validationOptions.minimun = options.minimun;
+				return validateMultipleCheckboxes( validationOptions );
+
+			} else if ( validation === 'multipleRadioButton' ) {
+
+				validationOptions.minimun = 1;
+				return validateMultipleRadioButtons( validationOptions );
+
 			}
 
 		};
@@ -208,6 +234,18 @@
 			return $val || options.rule;
 		};
 
+		validateMultipleCheckboxes = function ( options ) {
+			var $val = options.control.find(':checked').length;
+
+			return $val >= options.minimun || options.rule;
+		};
+
+		validateMultipleRadioButtons = function ( options ) {
+			var $val = options.control.find(':checked').length;
+
+			return $val >= options.minimun || options.rule;
+		};
+
 		return {
 			init : init
 		};
@@ -216,6 +254,7 @@
 
 	$.fn.pslidate = function () {
 		var psl = Object.create( PSL );
+		// debug( $.fn.pslidate.config );
 		return psl.init( {form: this, config: $.fn.pslidate.config} );
 	};
 
@@ -227,20 +266,24 @@
 		  , notEmpty  : /^\s*\S.*$/
 		  }
 		, messages :
-		  { text      : "Write a valid text."
-		  , number    : "Write a valid number."
-		  , email     : "Write a valid e-mail address."
-		  , notEmpty  : "Can not be left empty."
-		  , select    : "Choose an option."
-		  , checkbox  : "Choose an option."
+		  { text                : "Escriba un texto válido."
+		  , number              : "Escriba un número válido."
+		  , email               : "Escriba un email válido."
+		  , notEmpty            : "No se puede dejar en blanco."
+		  , select              : "Elija una opción."
+		  , checkbox            : "Elija una opción."
+		  , multipleCheckbox    : "Elija una opción."
+		  , multipleRadioButton : "Elija una opción."
 		  }
 		, rules  :
-		  { text      : "filter"
-		  , number    : "filter"
-		  , email     : "filter"
-		  , notEmpty  : "filter"
-		  , select    : "select"
-		  , checkbox  : "checkbox"
+		  { text                 : "filter"
+		  , number               : "filter"
+		  , email                : "filter"
+		  , notEmpty             : "filter"
+		  , select               : "select"
+		  , checkbox             : "checkbox"
+		  , multipleCheckbox     : "multipleCheckbox"
+		  , multipleRadioButton  : "multipleRadioButton"
 		  }
 		, errorClass : 'error'
 		};
