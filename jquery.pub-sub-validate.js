@@ -63,7 +63,7 @@
 				control        = $(control);
 				rule           = control.data('pslidate');
 				validation     = self.config.rules[rule];
-				minimun        = control.attr('data-pslCount') || 1
+				minimun        = control.attr('data-pslCount') || 1;
 				publishOptions =
 					{ status  : validateControl.apply( control, [{rule: rule, config: self.config, minimun: minimun }] )
 					, index   : index
